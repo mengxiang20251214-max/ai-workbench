@@ -43,6 +43,9 @@ export default {
     if (path === '/api/avatar/upload' && request.method === 'POST') {
       return handleAvatarUpload(request, env, corsHeaders)
     }
+    if (path === '/api/avatar' && request.method === 'GET') {
+      return handleGetAvatar(env, corsHeaders)
+    }
 
     // AI 路由
     if (path === '/api/ai/summary' && request.method === 'POST') {
@@ -152,23 +155,60 @@ async function handleAvatarUpload(
     }
 
     const arrayBuffer = await file.arrayBuffer()
-    const filename = `avatar-${Date.now()}.jpg`
+    const filename = `avatar-${Date.now()}.webp`
 
+    // 上传到 R2
     await env.BUCKET.put(filename, arrayBuffer, {
-      httpMetadata: { contentType: file.type },
+      httpMetadata: { contentType: 'image/webp' },
     })
+
+    // 保存到 D1（记录头像URL）
+    // 本地开发时使用相对 URL，生产环境使用完整 R2 URL
+    const avatarUrl = `/api/r2/${filename}`
+
+    await env.DB.prepare(
+      'UPDATE users SET avatar_url = ?, avatar_filename = ?, updated_at = datetime("now") WHERE id = 1'
+    ).bind(avatarUrl, filename).run()
 
     return new Response(
       JSON.stringify({
         success: true,
         filename,
-        url: `https://r2.example.com/${filename}`,
+        url: avatarUrl,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
     return new Response(
-      JSON.stringify({ error: 'Failed to upload avatar' }),
+      JSON.stringify({ error: 'Failed to upload avatar', details: String(error) }),
+      { status: 500, headers: corsHeaders }
+    )
+  }
+}
+
+async function handleGetAvatar(
+  env: Env,
+  corsHeaders: Record<string, string>
+) {
+  try {
+    const result = await env.DB.prepare(
+      'SELECT avatar_url FROM users WHERE id = 1'
+    ).first()
+
+    if (result && result.avatar_url) {
+      return new Response(
+        JSON.stringify({ success: true, avatarUrl: result.avatar_url }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    } else {
+      return new Response(
+        JSON.stringify({ success: true, avatarUrl: null }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ error: 'Failed to fetch avatar' }),
       { status: 500, headers: corsHeaders }
     )
   }

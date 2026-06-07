@@ -1,6 +1,7 @@
 interface Env {
   DB: D1Database
   BUCKET: R2Bucket
+  AI: any
 }
 
 export interface Journal {
@@ -48,6 +49,9 @@ export default {
     }
 
     // AI 路由
+    if (path === '/api/ai/assist' && request.method === 'POST') {
+      return handleAIAssist(request, env, corsHeaders)
+    }
     if (path === '/api/ai/summary' && request.method === 'POST') {
       return handleAISummary(request, env, corsHeaders)
     }
@@ -214,6 +218,71 @@ async function handleGetAvatar(
   }
 }
 
+async function handleAIAssist(
+  request: Request,
+  env: Env,
+  corsHeaders: Record<string, string>
+) {
+  try {
+    const { title, content, instruction } = await request.json() as {
+      title: string
+      content: string
+      instruction?: string
+    }
+
+    if (!title && !content) {
+      return new Response(
+        JSON.stringify({ error: 'Title or content required' }),
+        { status: 400, headers: corsHeaders }
+      )
+    }
+
+    const userInstruction = instruction || '请根据标题和已有内容，续写一段日志'
+
+    // 构造 prompt
+    const prompt = `日志标题：${title}\n日志内容：${content}\n\n用户指令：${userInstruction}\n\n请根据上述信息生成内容（保持与原内容风格一致）：`
+
+    // 检查 AI 是否可用
+    if (!env.AI) {
+      return new Response(
+        JSON.stringify({ error: 'AI service not available' }),
+        { status: 503, headers: corsHeaders }
+      )
+    }
+
+    // 调用 Cloudflare Workers AI
+    try {
+      const response = await env.AI.run('@cf/meta/llama-2-7b-chat-int8', {
+        prompt: prompt,
+        max_tokens: 512,
+      })
+
+      const result = response.result?.response || response.result?.text || ''
+
+      if (!result) {
+        throw new Error('Empty response from AI')
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, result }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    } catch (aiError) {
+      console.error('AI call failed:', aiError)
+      return new Response(
+        JSON.stringify({ error: 'AI service error: ' + String(aiError) }),
+        { status: 500, headers: corsHeaders }
+      )
+    }
+  } catch (error) {
+    console.error('Request parsing error:', error)
+    return new Response(
+      JSON.stringify({ error: 'Failed to process request' }),
+      { status: 500, headers: corsHeaders }
+    )
+  }
+}
+
 async function handleAISummary(
   request: Request,
   env: Env,
@@ -229,13 +298,37 @@ async function handleAISummary(
       )
     }
 
-    // TODO: 集成 Cloudflare Workers AI
-    const summary = `摘要: ${content.substring(0, 100)}...`
+    // 如果 AI 不可用，使用默认摘要
+    if (!env.AI) {
+      const summary = `摘要: ${content.substring(0, 100)}...`
+      return new Response(
+        JSON.stringify({ success: true, summary }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
-    return new Response(
-      JSON.stringify({ success: true, summary }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    // 调用 AI 生成摘要
+    try {
+      const response = await env.AI.run('@cf/meta/llama-2-7b-chat-int8', {
+        prompt: `请简要总结以下文本（限 50 字以内）：\n\n${content}`,
+        max_tokens: 100,
+      })
+
+      const summary = response.result?.response || response.result?.text || `摘要: ${content.substring(0, 100)}...`
+
+      return new Response(
+        JSON.stringify({ success: true, summary }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    } catch (aiError) {
+      console.error('AI summary call failed:', aiError)
+      // 降级方案：返回文本摘要
+      const summary = `摘要: ${content.substring(0, 100)}...`
+      return new Response(
+        JSON.stringify({ success: true, summary }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
   } catch (error) {
     return new Response(
       JSON.stringify({ error: 'Failed to generate summary' }),

@@ -1,6 +1,8 @@
-import React from 'react'
+import React, { useState } from 'react'
 
 const LogList = ({ logs, selectedLogId, onSelectLog, onNewLog, onDeleteLog }) => {
+  const [hoveredId, setHoveredId] = useState(null)
+
   const formatDate = (dateString) => {
     try {
       const date = new Date(dateString)
@@ -9,6 +11,13 @@ const LogList = ({ logs, selectedLogId, onSelectLog, onNewLog, onDeleteLog }) =>
       return `${month}/${day}`
     } catch {
       return dateString
+    }
+  }
+
+  const handleDelete = (e, logId) => {
+    e.stopPropagation()
+    if (window.confirm('确定删除这篇日志吗？')) {
+      onDeleteLog(logId)
     }
   }
 
@@ -33,18 +42,22 @@ const LogList = ({ logs, selectedLogId, onSelectLog, onNewLog, onDeleteLog }) =>
         ) : (
           logs.map((log) => {
             const isSelected = log.id === selectedLogId
+            const isHovered = hoveredId === log.id
+
             return (
               <div
                 key={log.id}
+                onMouseEnter={() => setHoveredId(log.id)}
+                onMouseLeave={() => setHoveredId(null)}
                 onClick={() => onSelectLog(log.id)}
-                className={`px-4 py-3 border-l-2 cursor-pointer transition-colors ${
+                className={`relative px-4 py-3 border-l-2 cursor-pointer transition-colors ${
                   isSelected
                     ? 'border-l-[var(--active-line)] bg-[var(--hover-bg)]'
                     : 'border-l-transparent hover:bg-[var(--hover-bg)]'
                 }`}
               >
                 {/* 日期 + 标题 */}
-                <div className="flex gap-3 items-start">
+                <div className="flex gap-3 items-start pr-8">
                   <span className="text-xs text-[var(--text-tertiary)] flex-shrink-0 mt-0.5">
                     {formatDate(log.timestamp)}
                   </span>
@@ -64,18 +77,16 @@ const LogList = ({ logs, selectedLogId, onSelectLog, onNewLog, onDeleteLog }) =>
                   </div>
                 </div>
 
-                {/* 悬停时显示删除按钮 */}
-                <div className="group absolute right-4 top-3 opacity-0 group-hover:opacity-100">
+                {/* 悬停时显示删除按钮（垃圾桶图标） */}
+                {isHovered && (
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onDeleteLog(log.id)
-                    }}
-                    className="text-xs text-[var(--text-tertiary)] hover:text-red-500 transition-colors"
+                    onClick={(e) => handleDelete(e, log.id)}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-lg opacity-50 hover:opacity-100 transition-opacity"
+                    title="删除日志"
                   >
-                    删除
+                    🗑️
                   </button>
-                </div>
+                )}
               </div>
             )
           })

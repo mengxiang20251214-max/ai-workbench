@@ -82,6 +82,18 @@ function App() {
         )
         setLogs(updated)
         localStorage.setItem('journals', JSON.stringify(updated))
+
+        // 调用后端 API 更新（如果已部署）
+        try {
+          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8787'
+          await fetch(`${apiUrl}/api/journals/${selectedLogId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+          })
+        } catch (apiError) {
+          console.error('Failed to sync update to API:', apiError)
+        }
       } else {
         // 创建新日志
         const newLog = {
@@ -94,9 +106,19 @@ function App() {
         setLogs(updated)
         setSelectedLogId(newLog.id)
         localStorage.setItem('journals', JSON.stringify(updated))
-      }
 
-      // TODO: 调用后端 API 保存
+        // 调用后端 API 创建（如果已部署）
+        try {
+          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8787'
+          await fetch(`${apiUrl}/api/journals`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+          })
+        } catch (apiError) {
+          console.error('Failed to sync create to API:', apiError)
+        }
+      }
     } catch (error) {
       console.error('Save failed:', error)
       alert('保存失败')
@@ -120,8 +142,8 @@ function App() {
     localStorage.setItem('journals', JSON.stringify(updated))
   }
 
-  const handleDeleteLog = (id) => {
-    if (confirm('确定要删除这条日志吗？')) {
+  const handleDeleteLog = async (id) => {
+    try {
       const updated = logs.filter(log => log.id !== id)
       setLogs(updated)
       localStorage.setItem('journals', JSON.stringify(updated))
@@ -131,7 +153,19 @@ function App() {
         setSelectedLogId(updated.length > 0 ? updated[0].id : null)
       }
 
-      // TODO: 调用后端 API 删除
+      // 调用后端 API 删除（如果已部署）
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8787'
+        await fetch(`${apiUrl}/api/journals/${id}`, {
+          method: 'DELETE',
+        })
+      } catch (apiError) {
+        // 本地删除成功，API 失败时的错误可以忽略（开发环境）
+        console.error('Failed to sync delete to API:', apiError)
+      }
+    } catch (error) {
+      console.error('Delete failed:', error)
+      alert('删除失败')
     }
   }
 

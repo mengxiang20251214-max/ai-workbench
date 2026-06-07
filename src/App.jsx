@@ -170,8 +170,8 @@ function App() {
   }
 
   const handleAIAssist = async (content) => {
-    // TODO: 弹出 AI 协助对话框
-    alert('AI 协助功能开发中...')
+    // AI 协助功能已在 LogEditor 中实现
+    return
   }
 
   const selectedLog = logs.find(log => log.id === selectedLogId)

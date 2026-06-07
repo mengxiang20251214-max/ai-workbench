@@ -71,7 +71,7 @@ async function handleGetJournals(env: Env, corsHeaders: Record<string, string>) 
     })
   } catch (error) {
     return new Response(
-      JSON.stringify({ error: 'Failed to fetch journals' }),
+      JSON.stringify({ error: '获取日志失败' }),
       { status: 500, headers: corsHeaders }
     )
   }
@@ -87,7 +87,7 @@ async function handleCreateJournal(
 
     if (!title || !content) {
       return new Response(
-        JSON.stringify({ error: 'Title and content required' }),
+        JSON.stringify({ error: '需要标题和内容' }),
         { status: 400, headers: corsHeaders }
       )
     }
@@ -102,15 +102,15 @@ async function handleCreateJournal(
 
     if (success) {
       return new Response(
-        JSON.stringify({ success: true, message: 'Journal created' }),
+        JSON.stringify({ success: true, message: '日志已创建' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     } else {
-      throw new Error('Failed to insert')
+      throw new Error('插入失败')
     }
   } catch (error) {
     return new Response(
-      JSON.stringify({ error: 'Failed to create journal' }),
+      JSON.stringify({ error: '创建日志失败' }),
       { status: 500, headers: corsHeaders }
     )
   }
@@ -128,15 +128,15 @@ async function handleDeleteJournal(
 
     if (success) {
       return new Response(
-        JSON.stringify({ success: true, message: 'Journal deleted' }),
+        JSON.stringify({ success: true, message: '日志已删除' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     } else {
-      throw new Error('Failed to delete')
+      throw new Error('删除失败')
     }
   } catch (error) {
     return new Response(
-      JSON.stringify({ error: 'Failed to delete journal' }),
+      JSON.stringify({ error: '删除日志失败' }),
       { status: 500, headers: corsHeaders }
     )
   }
@@ -153,7 +153,7 @@ async function handleAvatarUpload(
 
     if (!file) {
       return new Response(
-        JSON.stringify({ error: 'No file provided' }),
+        JSON.stringify({ error: '未提供文件' }),
         { status: 400, headers: corsHeaders }
       )
     }
@@ -184,7 +184,7 @@ async function handleAvatarUpload(
     )
   } catch (error) {
     return new Response(
-      JSON.stringify({ error: 'Failed to upload avatar', details: String(error) }),
+      JSON.stringify({ error: '上传头像失败', details: String(error) }),
       { status: 500, headers: corsHeaders }
     )
   }
@@ -212,7 +212,7 @@ async function handleGetAvatar(
     }
   } catch (error) {
     return new Response(
-      JSON.stringify({ error: 'Failed to fetch avatar' }),
+      JSON.stringify({ error: '获取头像失败' }),
       { status: 500, headers: corsHeaders }
     )
   }
@@ -232,7 +232,7 @@ async function handleAIAssist(
 
     if (!title && !content) {
       return new Response(
-        JSON.stringify({ error: 'Title or content required' }),
+        JSON.stringify({ error: '需要标题或内容' }),
         { status: 400, headers: corsHeaders }
       )
     }
@@ -245,7 +245,7 @@ async function handleAIAssist(
     // 检查 AI 是否可用
     if (!env.AI) {
       return new Response(
-        JSON.stringify({ error: 'AI service not available' }),
+        JSON.stringify({ error: 'AI 服务不可用' }),
         { status: 503, headers: corsHeaders }
       )
     }
@@ -260,7 +260,7 @@ async function handleAIAssist(
       const result = response.result?.response || response.result?.text || ''
 
       if (!result) {
-        throw new Error('Empty response from AI')
+        throw new Error('AI 返回空内容')
       }
 
       return new Response(
@@ -270,14 +270,14 @@ async function handleAIAssist(
     } catch (aiError) {
       console.error('AI call failed:', aiError)
       return new Response(
-        JSON.stringify({ error: 'AI service error: ' + String(aiError) }),
+        JSON.stringify({ error: 'AI 服务错误：' + String(aiError) }),
         { status: 500, headers: corsHeaders }
       )
     }
   } catch (error) {
     console.error('Request parsing error:', error)
     return new Response(
-      JSON.stringify({ error: 'Failed to process request' }),
+      JSON.stringify({ error: '处理请求失败' }),
       { status: 500, headers: corsHeaders }
     )
   }
@@ -293,7 +293,7 @@ async function handleAISummary(
 
     if (!content) {
       return new Response(
-        JSON.stringify({ error: 'Content required' }),
+        JSON.stringify({ error: '需要内容' }),
         { status: 400, headers: corsHeaders }
       )
     }
@@ -331,7 +331,7 @@ async function handleAISummary(
     }
   } catch (error) {
     return new Response(
-      JSON.stringify({ error: 'Failed to generate summary' }),
+      JSON.stringify({ error: '生成摘要失败' }),
       { status: 500, headers: corsHeaders }
     )
   }
